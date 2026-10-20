@@ -1,0 +1,1977 @@
+<!DOCTYPE html>
+<html lang="fr" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tableau de Bord VSB - Programme Villes Sans Bidonvilles</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              200: '#99f6e4',
+              300: '#5eead4',
+              400: '#2dd4bf',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              800: '#115e59',
+              900: '#134e4a',
+            },
+            morocco: {
+              red: '#C1272D',
+              green: '#006233',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- PapaParse & SheetJS for live CSV/Excel Import & Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex antialiased">
+
+  <!-- Mobile Overlay -->
+  <div id="mobileOverlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 hidden lg:hidden"></div>
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0 no-print">
+    <!-- Brand Header -->
+    <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-800 flex items-center justify-center text-white shadow-lg shadow-teal-500/20 font-bold text-xl">
+          VSB
+        </div>
+        <div>
+          <h1 class="font-extrabold text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
+            VSB Monitor
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+          </h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Programme Villes Sans Bidonvilles</p>
+        </div>
+      </div>
+      <button id="closeSidebarBtn" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Navigation Links -->
+    <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
+      <div class="px-3 py-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Supervision</div>
+      
+      <button data-tab="overview" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition active-tab">
+        <div class="flex items-center space-x-3">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 text-emerald-600"></i>
+          <span>Vue d'Ensemble</span>
+        </div>
+        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">KPIs</span>
+      </button>
+
+      <button data-tab="chantiers" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+        <div class="flex items-center space-x-3">
+          <i data-lucide="building-2" class="w-4 h-4 text-blue-600"></i>
+          <span>Suivi des Chantiers</span>
+        </div>
+        <span id="badgeTotalImm" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">1 965</span>
+      </button>
+
+      <button data-tab="equipements" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+        <div class="flex items-center space-x-3">
+          <i data-lucide="school" class="w-4 h-4 text-amber-600"></i>
+          <span>Équipements Publics</span>
+        </div>
+        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400">59 sites</span>
+      </button>
+
+      <div class="px-3 pt-4 pb-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Infrastructures & Qualité</div>
+
+      <button data-tab="srm" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+        <div class="flex items-center space-x-3">
+          <i data-lucide="zap" class="w-4 h-4 text-yellow-500"></i>
+          <span>Réseaux & SRM</span>
+        </div>
+        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400">47 ops</span>
+      </button>
+
+      <button data-tab="lpee" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+        <div class="flex items-center space-x-3">
+          <i data-lucide="check-check" class="w-4 h-4 text-emerald-500"></i>
+          <span>Contrôle LPEE / CID</span>
+        </div>
+        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400">Laboratoire</span>
+      </button>
+
+      <button data-tab="checklist-ph" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+        <div class="flex items-center space-x-3">
+          <i data-lucide="clipboard-check" class="w-4 h-4 text-teal-600"></i>
+          <span>Check-liste PH</span>
+        </div>
+        <span id="badgeChecklistPh" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-400">18 tranches</span>
+      </button>
+
+      <div class="px-3 pt-4 pb-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Données & Rapports</div>
+
+      <button data-tab="import-export" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+        <div class="flex items-center space-x-3">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4 text-indigo-500"></i>
+          <span>Import CSV & Exports</span>
+        </div>
+        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Sync</span>
+      </button>
+    </nav>
+
+    <!-- Mini Program Summary Card in Sidebar -->
+    <div class="p-4 m-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-800/80 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/30">
+      <div class="flex items-center gap-2 mb-2">
+        <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+        <span class="text-xs font-bold text-slate-900 dark:text-white">Région Casablanca-Settat</span>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Logements</span>
+          <span id="sideSummaryAppts" class="font-bold text-slate-800 dark:text-slate-200">41 538</span>
+        </div>
+        <div>
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Projets</span>
+          <span id="sideSummaryProjets" class="font-bold text-slate-800 dark:text-slate-200">22</span>
+        </div>
+      </div>
+      <div class="mt-3 pt-2 border-t border-emerald-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
+        <span>Avancement Global</span>
+        <span id="sideSummaryAvancement" class="font-bold">64.9%</span>
+      </div>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+      <span>Actualisé: Octobre 2026</span>
+      <span class="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live Data
+      </span>
+    </div>
+  </aside>
+
+  <!-- MAIN VIEWPORT -->
+  <div class="flex-1 lg:ml-72 flex flex-col min-w-0">
+
+    <!-- TOPBAR -->
+    <header class="sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between no-print">
+      <div class="flex items-center space-x-4">
+        <button id="openSidebarBtn" class="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div>
+          <h2 id="pageTitle" class="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">Vue d'Ensemble Stratégique</h2>
+          <p id="pageSubtitle" class="text-xs text-slate-500 dark:text-slate-400">Indicateurs clés du Programme VSB (Villes Sans Bidonvilles)</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <!-- Live Quick Search -->
+        <div class="relative hidden md:block w-64">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <input type="text" id="quickSearchInput" placeholder="Rechercher projet, promoteur, imm..." class="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+        </div>
+
+        <!-- Refresh Sources Data Button -->
+        <button id="refreshDataBtn" onclick="window.refreshSourceData()" title="Actualiser et vérifier les nouvelles données sources" class="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-bold transition shadow-sm">
+          <i id="refreshDataIcon" data-lucide="refresh-cw" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+          <span class="hidden sm:inline">Actualiser Données</span>
+        </button>
+
+        <!-- Export Dropdown / Print -->
+        <button id="printReportBtn" title="Imprimer le rapport exécutif" class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+        </button>
+
+        <button id="exportExcelBtn" title="Exporter les données filtrées en Excel (.xlsx)" class="flex items-center space-x-2 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Export Excel</span>
+        </button>
+
+        <!-- Dark / Light Mode Switcher -->
+        <button id="themeToggleBtn" title="Basculer thème Sombre / Clair" class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition">
+          <i id="themeIcon" data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- GLOBAL FILTER BAR (Persistent across views) -->
+    <div id="globalFilterBar" class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3.5 no-print">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center space-x-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+          <i data-lucide="filter" class="w-3.5 h-3.5 text-emerald-600"></i>
+          <span>Filtres :</span>
+        </div>
+
+        <!-- Province Filter -->
+        <select id="filterProvince" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <option value="">Toutes les Provinces</option>
+        </select>
+
+        <!-- Promoteur Filter -->
+        <select id="filterPromoteur" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none max-w-xs">
+          <option value="">Tous les Promoteurs</option>
+        </select>
+
+        <!-- Projet Filter -->
+        <select id="filterProjet" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none max-w-xs">
+          <option value="">Tous les Projets</option>
+        </select>
+
+        <!-- GH Filter (Contextuel au Projet sélectionné) -->
+        <div id="filterGHContainer" class="hidden items-center space-x-1.5 animate-fade-in-slide">
+          <label for="filterGH" class="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1 shrink-0">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            GH :
+          </label>
+          <select id="filterGH" class="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-xs font-semibold text-emerald-950 dark:text-emerald-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm">
+            <option value="">Tous les GH</option>
+          </select>
+        </div>
+
+        <!-- Statut Permis d'Habiter (PH) Filter -->
+        <select id="filterPH" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <option value="">Statut PH (Tous)</option>
+          <option value="OBTENU">PH Obtenu (Délivré)</option>
+          <option value="NON OBTENU">PH Non Obtenu / En cours</option>
+        </select>
+
+        <!-- Tranche Avancement Filter -->
+        <select id="filterAvancement" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <option value="">Avancement (Tous)</option>
+          <option value="100">Achevé (100%)</option>
+          <option value="75-99">Avancé (75% - 99%)</option>
+          <option value="50-75">Intermédiaire (50% - 75%)</option>
+          <option value="25-50">En cours (25% - 50%)</option>
+          <option value="0-25">Démarrage (0% - 25%)</option>
+        </select>
+
+        <!-- Reset Button -->
+        <button id="resetFiltersBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center space-x-1">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span>Réinitialiser</span>
+        </button>
+
+        <!-- Active Filter Badge -->
+        <div class="ml-auto flex items-center space-x-2 text-xs">
+          <span class="text-slate-500 dark:text-slate-400">Résultats :</span>
+          <span id="filteredCountBadge" class="font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">1 965 immeubles</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN BODY CONTAINER -->
+    <main class="flex-1 p-6 space-y-6">
+
+      <!-- ========================================== -->
+      <!-- VIEW 1: VUE D'ENSEMBLE (EXECUTIVE OVERVIEW) -->
+      <!-- ========================================== -->
+      <section id="view-overview" class="view-panel space-y-6">
+        
+        <!-- Top Executive KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <!-- KPI 1: Unités Conventionnées -->
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Appartements</span>
+              <div class="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600">
+                <i data-lucide="home" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div id="kpiTotalAppts" class="text-2xl font-extrabold text-slate-900 dark:text-white">41 538</div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Unités conventionnées</p>
+            <div class="absolute bottom-0 left-0 right-0 h-1 bg-blue-500"></div>
+          </div>
+
+          <!-- KPI 2: Immeubles Suivis -->
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Immeubles</span>
+              <div class="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600">
+                <i data-lucide="building" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div id="kpiTotalImm" class="text-2xl font-extrabold text-slate-900 dark:text-white">1 965</div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Bâtiments & blocs</p>
+            <div class="absolute bottom-0 left-0 right-0 h-1 bg-purple-500"></div>
+          </div>
+
+          <!-- KPI 3: Avancement Général -->
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avancement Global</span>
+              <div class="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600">
+                <i data-lucide="trending-up" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div id="kpiAvancementGen" class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">64.9%</div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Moyenne pondérée</p>
+            <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500"></div>
+          </div>
+
+          <!-- KPI 4: Gros Œuvre -->
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Gros Œuvre (GO)</span>
+              <div class="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600">
+                <i data-lucide="hard-hat" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div id="kpiAvancementGO" class="text-2xl font-extrabold text-slate-900 dark:text-white">75.5%</div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Structure & béton</p>
+            <div class="absolute bottom-0 left-0 right-0 h-1 bg-amber-500"></div>
+          </div>
+
+          <!-- KPI 5: Lots Secondaires -->
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Lots Secondaires</span>
+              <div class="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600">
+                <i data-lucide="wrench" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div id="kpiAvancementLS" class="text-2xl font-extrabold text-slate-900 dark:text-white">53.6%</div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Finitions & équipements</p>
+            <div class="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500"></div>
+          </div>
+
+          <!-- KPI 6: Permis d'Habiter (PH) -->
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Permis d'Habiter (PH)</span>
+              <div class="p-2 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600">
+                <i data-lucide="badge-check" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div id="kpiPHObtenu" class="text-2xl font-extrabold text-slate-900 dark:text-white">258</div>
+            <p id="kpiPHSub" class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Délivrés (13.1%)</p>
+            <div class="absolute bottom-0 left-0 right-0 h-1 bg-teal-500"></div>
+          </div>
+        </div>
+
+        <!-- Strategic Alert Banner -->
+        <div class="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/20 rounded-2xl p-4.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="flex items-center space-x-3.5">
+            <div class="p-2.5 rounded-xl bg-emerald-600 text-white shrink-0">
+              <i data-lucide="sparkles" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-sm text-slate-900 dark:text-white">Synthèse Opérationnelle & Prochaines Livraisons</h3>
+              <p class="text-xs text-slate-600 dark:text-slate-300">
+                <strong id="bannerHighlight1">601 immeubles</strong> sont achevés à 100%. Le défi prioritaire reste la finalisation des raccordements SRM et la délivrance des Permis d'Habiter sur les tranches avancées.
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="window.switchTab('chantiers', {ph:'OBTENU'})" class="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 transition">
+              Voir Immeubles avec PH
+            </button>
+            <button onclick="window.switchTab('equipements')" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition">
+              Suivi Équipements Publics
+            </button>
+          </div>
+        </div>
+
+        <!-- CHARTS GRID -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Chart 1: Avancement par Province -->
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white">Avancement Moyen par Province / Préfecture</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Comparaison du taux d'avancement général (%)</p>
+              </div>
+              <span class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+              </span>
+            </div>
+            <div class="h-64">
+              <canvas id="chartProvinces"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: Répartition par Tranche d'Avancement -->
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white">Répartition des Immeubles par Niveau d'Avancement</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Volumes d'immeubles selon les tranches %</p>
+              </div>
+              <span class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                <i data-lucide="pie-chart" class="w-4 h-4"></i>
+              </span>
+            </div>
+            <div class="h-64 flex items-center justify-center">
+              <canvas id="chartBrackets"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 3: Top Projets en Volume & Avancement -->
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white">Top Projets par Nombre de Logements</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Capacité en logements et avancement correspondant</p>
+              </div>
+              <span class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                <i data-lucide="layers" class="w-4 h-4"></i>
+              </span>
+            </div>
+            <div class="h-72">
+              <canvas id="chartTopProjets"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 4: Gros Œuvre vs Lots Secondaires -->
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white">Comparatif : Gros Œuvre vs Lots Secondaires</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Écart d'avancement par province (%)</p>
+              </div>
+              <span class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                <i data-lucide="activity" class="w-4 h-4"></i>
+              </span>
+            </div>
+            <div class="h-72">
+              <canvas id="chartGoVsLs"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- PROVINCES & SITES SUMMARY TABLE -->
+        <div class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <h4 class="font-bold text-sm text-slate-900 dark:text-white">Tableau Synthétique par Province / Préfecture</h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Bilan des unités conventionnées, immeubles et statut des permis d'habiter</p>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              7 Provinces
+            </span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="px-5 py-3">Province / Préfecture</th>
+                  <th class="px-5 py-3">Logements</th>
+                  <th class="px-5 py-3">Immeubles</th>
+                  <th class="px-5 py-3">Gros Œuvre</th>
+                  <th class="px-5 py-3">Lots Secondaires</th>
+                  <th class="px-5 py-3">Avancement Global</th>
+                  <th class="px-5 py-3">Permis d'Habiter</th>
+                  <th class="px-5 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="overviewProvincesTbody" class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 2: SUIVI DES CHANTIERS & IMMEUBLES    -->
+      <!-- ========================================== -->
+      <section id="view-chantiers" class="view-panel space-y-6 hidden">
+        
+        <!-- Toolbar & Quick Filters -->
+        <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <button data-table-filter="all" class="table-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white dark:bg-white dark:text-slate-900 transition">
+              Tous (<span id="countAllImm">1 965</span>)
+            </button>
+            <button data-table-filter="ph-ok" class="table-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              PH Délivré (<span id="countPHOk">258</span>)
+            </button>
+            <button data-table-filter="acheve" class="table-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              Achevé 100% (<span id="count100">601</span>)
+            </button>
+            <button data-table-filter="en-cours" class="table-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              En cours (&gt;50%) (<span id="countOver50">1 240</span>)
+            </button>
+            <button data-table-filter="demarrage" class="table-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              Démarrage (&le;50%) (<span id="countUnder50">725</span>)
+            </button>
+          </div>
+
+          <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+            <span class="text-xs text-slate-500 dark:text-slate-400">Lignes par page :</span>
+            <select id="pageSizeSelect" class="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none">
+              <option value="15">15</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Chantiers Table -->
+        <div class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="px-4 py-3.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.sortTable('province')">
+                    Province / Projet <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1"></i>
+                  </th>
+                  <th class="px-4 py-3.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.sortTable('promoteur')">
+                    Promoteur <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1"></i>
+                  </th>
+                  <th class="px-4 py-3.5">Tranche / GH</th>
+                  <th class="px-4 py-3.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.sortTable('imm')">
+                    Immeuble <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1"></i>
+                  </th>
+                  <th class="px-4 py-3.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.sortTable('appts_imm')">
+                    Appts <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1"></i>
+                  </th>
+                  <th class="px-4 py-3.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.sortTable('ph_status')">
+                    Permis d'Habiter <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1"></i>
+                  </th>
+                  <th class="px-4 py-3.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.sortTable('av_go')">
+                    Gros Œuvre <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1"></i>
+                  </th>
+                  <th class="px-4 py-3.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.sortTable('av_ls')">
+                    Lots Secondaires <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1"></i>
+                  </th>
+                  <th class="px-4 py-3.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="window.sortTable('av_gen')">
+                    Total Général <i data-lucide="arrow-up-down" class="w-3 h-3 inline ml-1"></i>
+                  </th>
+                  <th class="px-4 py-3.5 text-center">Fiche Technique</th>
+                </tr>
+              </thead>
+              <tbody id="chantiersTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Bar -->
+          <div class="p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 pagination-container">
+            <div id="paginationSummary">
+              Affichage 1 à 25 sur 1 965 résultats
+            </div>
+            <div class="flex items-center space-x-2">
+              <button id="prevPageBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition">
+                Précédent
+              </button>
+              <div id="paginationNumbers" class="flex items-center space-x-1">
+                <!-- Page buttons injected via JS -->
+              </div>
+              <button id="nextPageBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition">
+                Suivant
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 3: ÉQUIPEMENTS PUBLICS                -->
+      <!-- ========================================== -->
+      <section id="view-equipements" class="view-panel space-y-6 hidden">
+        
+        <!-- Equipements KPIs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-slate-500 uppercase">Total Équipements</span>
+              <i data-lucide="school" class="w-4 h-4 text-slate-500"></i>
+            </div>
+            <div class="text-2xl font-extrabold text-slate-900 dark:text-white">59</div>
+            <p class="text-[11px] text-slate-500">Mosquées, Écoles, Lycées...</p>
+          </div>
+
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-emerald-600 uppercase">Achevés / Livrés</span>
+              <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+            </div>
+            <div id="eqAchevesCount" class="text-2xl font-extrabold text-emerald-600">9</div>
+            <p class="text-[11px] text-slate-500">Opérationnels</p>
+          </div>
+
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-blue-600 uppercase">En Cours des Travaux</span>
+              <i data-lucide="clock" class="w-4 h-4 text-blue-600"></i>
+            </div>
+            <div id="eqEnCoursCount" class="text-2xl font-extrabold text-blue-600">45</div>
+            <p class="text-[11px] text-slate-500">Avancement en suivi</p>
+          </div>
+
+          <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-rose-600 uppercase">Non Démarrés</span>
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600"></i>
+            </div>
+            <div id="eqNonDemarreCount" class="text-2xl font-extrabold text-rose-600">5</div>
+            <p class="text-[11px] text-slate-500">Point de vigilance</p>
+          </div>
+        </div>
+
+        <!-- Filter tabs for Equipements -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <button onclick="window.filterEquipementsStatus('all')" class="eq-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white dark:bg-white dark:text-slate-900 transition">
+              Tous (59)
+            </button>
+            <button onclick="window.filterEquipementsStatus('Achevé / Livré')" class="eq-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              Achevés
+            </button>
+            <button onclick="window.filterEquipementsStatus('En cours')" class="eq-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              En cours
+            </button>
+            <button onclick="window.filterEquipementsStatus('Non démarré')" class="eq-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              Non démarrés
+            </button>
+          </div>
+
+          <div class="relative w-64">
+            <input type="text" id="searchEquipement" placeholder="Filtrer équipement..." class="w-full px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <!-- Equipements Grid -->
+        <div id="equipementsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Injected via JS -->
+        </div>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 4: RÉSEAUX & SRM                      -->
+      <!-- ========================================== -->
+      <section id="view-srm" class="view-panel space-y-6 hidden">
+        
+        <!-- SRM Highlights -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center space-x-3 mb-2">
+              <div class="p-2.5 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                <i data-lucide="zap" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white">Électricité (BT / MT)</h4>
+                <p class="text-xs text-slate-500">Postes transformateurs & hors-site</p>
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300 mt-2">
+              Travaux hors-site 1,5 km nécessaires pour alimenter les projets adjacents et soulager les postes de distribution.
+            </p>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center space-x-3 mb-2">
+              <div class="p-2.5 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
+                <i data-lucide="droplet" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white">Eau Potable</h4>
+                <p class="text-xs text-slate-500">Alimentation & distribution</p>
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300 mt-2">
+              Raccordements sur réseau principal en cours de validation par la Société Régionale Multiservices (SRM).
+            </p>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center space-x-3 mb-2">
+              <div class="p-2.5 rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-400">
+                <i data-lucide="waves" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white">Assainissement</h4>
+                <p class="text-xs text-slate-500">Eaux pluviales & usées</p>
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300 mt-2">
+              Bassins d'orage finalisés en génie civil (90-95%), équipements électromécaniques en phase d'installation.
+            </p>
+          </div>
+        </div>
+
+        <!-- SRM Operations Table -->
+        <div class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <h4 class="font-bold text-sm text-slate-900 dark:text-white">Détail des Opérations de Raccordement SRM</h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Suivi des points de blocage et échéances par projet</p>
+            </div>
+            <span id="srmCountBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              47 Opérations SRM
+            </span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="px-4 py-3">Province / Projet</th>
+                  <th class="px-4 py-3">Promoteur</th>
+                  <th class="px-4 py-3">Tranche / GH</th>
+                  <th class="px-4 py-3">Unités</th>
+                  <th class="px-4 py-3">Électricité</th>
+                  <th class="px-4 py-3">Eau Potable</th>
+                  <th class="px-4 py-3">Assainissement</th>
+                  <th class="px-4 py-3">Blocage / Dépendance SRM</th>
+                </tr>
+              </thead>
+              <tbody id="srmTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 5: CONTRÔLE QUALITÉ LPEE / CID        -->
+      <!-- ========================================== -->
+      <section id="view-lpee" class="view-panel space-y-6 hidden">
+        
+        <!-- LPEE Summary KPI -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <span class="text-xs font-bold text-slate-500 uppercase">Dossiers Laboratoire</span>
+            <div id="lpeeTotalCount" class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">33 Dossiers</div>
+            <p class="text-xs text-slate-500 mt-1">Contrôles techniques LPEE & CID</p>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <span class="text-xs font-bold text-emerald-600 uppercase">Rapports Complets</span>
+            <div id="lpeeCompletsCount" class="text-2xl font-extrabold text-emerald-600 mt-1">15</div>
+            <p class="text-xs text-slate-500 mt-1">Levées de réserves conformes</p>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <span class="text-xs font-bold text-amber-600 uppercase">Rapports En Cours / Incomplets</span>
+            <div id="lpeeIncompletsCount" class="text-2xl font-extrabold text-amber-600 mt-1">18</div>
+            <p class="text-xs text-slate-500 mt-1">PV d'essais ou réserves en cours</p>
+          </div>
+        </div>
+
+        <!-- LPEE Table -->
+        <div class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <h4 class="font-bold text-sm text-slate-900 dark:text-white">Statut des Contrôles & Visites LPEE / CID</h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Suivi des audits de conformité par lot (Béton, Étanchéité, Fluides...)</p>
+            </div>
+            <span id="lpeeTableCountBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              33 Dossiers LPEE
+            </span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="px-4 py-3">Site / Province</th>
+                  <th class="px-4 py-3">Projet & Promoteur</th>
+                  <th class="px-4 py-3">GH</th>
+                  <th class="px-4 py-3">Unités</th>
+                  <th class="px-4 py-3">Date PH</th>
+                  <th class="px-4 py-3">Complétude</th>
+                  <th class="px-4 py-3">Gros Œuvre LPEE</th>
+                  <th class="px-4 py-3">Étanchéité</th>
+                  <th class="px-4 py-3">Électricité & Plomberie</th>
+                </tr>
+              </thead>
+              <tbody id="lpeeTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW: CHECK-LISTE PERMIS D'HABITER (PH)    -->
+      <!-- ========================================== -->
+      <section id="view-checklist-ph" class="view-panel space-y-6 hidden">
+        
+        <!-- Checklist PH Header Banner -->
+        <div class="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">
+                Conformité Réglementaire
+              </span>
+              <span class="text-xs text-slate-400">• Source : CHECK LISTE ph CSV.csv</span>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-900 dark:text-white mt-1 flex items-center gap-2">
+              <i data-lucide="clipboard-check" class="w-6 h-6 text-teal-600"></i>
+              Check-liste Permis d'Habiter (PH) & Dossiers Techniques
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Vérification de l'obtention du Permis d'Habiter (via Rokhas), des attestations Archi, BET, BCT, Étanchéité et Rapports de Laboratoire avec accès direct aux fichiers.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <input type="file" id="checklistPhDirectFileInput" accept=".csv,.xlsx,.xls" class="hidden" onchange="window.handleLotFileSelected(event, 'checklist')">
+            <button onclick="document.getElementById('checklistPhDirectFileInput').click()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm" title="Importer directement un nouveau fichier CSV ou Excel pour mettre à jour la check-liste">
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+              <span>Importer / Sync Fichier PH</span>
+            </button>
+            <button onclick="window.exportChecklistPhToExcel()" class="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 transition flex items-center space-x-1.5 shadow-sm">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+              <span>Exporter Excel</span>
+            </button>
+            <button onclick="window.refreshChecklistPhData()" class="px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              <span>Actualiser</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 KPI Summary Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- KPI 1: Projets & GH -->
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-slate-500 uppercase">Tranches & GH</span>
+              <i data-lucide="building" class="w-4 h-4 text-slate-500"></i>
+            </div>
+            <div id="phTotalGhCount" class="text-2xl font-extrabold text-slate-900 dark:text-white">18</div>
+            <p id="phTotalProjetsCount" class="text-[11px] text-slate-500">8 Projets audités</p>
+          </div>
+
+          <!-- KPI 2: Permis d'Habiter Rokhas Disponibles -->
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-emerald-600 uppercase">Permis Rokhas Déposés</span>
+              <i data-lucide="file-check-2" class="w-4 h-4 text-emerald-600"></i>
+            </div>
+            <div id="phRokhasCount" class="text-2xl font-extrabold text-emerald-600">6</div>
+            <p id="phRokhasPct" class="text-[11px] text-emerald-600/80 font-semibold">33.3% des tranches</p>
+          </div>
+
+          <!-- KPI 3: Taux de complétude globale -->
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-teal-600 uppercase">Complétude Globale</span>
+              <i data-lucide="percent" class="w-4 h-4 text-teal-600"></i>
+            </div>
+            <div id="phTauxCompletude" class="text-2xl font-extrabold text-teal-600">14.8%</div>
+            <p id="phDocsRatio" class="text-[11px] text-slate-500">16 / 108 pièces renseignées</p>
+          </div>
+
+          <!-- KPI 4: Attestations Techniques Déposées -->
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-blue-600 uppercase">Attestations Déposées</span>
+              <i data-lucide="shield-check" class="w-4 h-4 text-blue-600"></i>
+            </div>
+            <div id="phAttestationsCount" class="text-2xl font-extrabold text-blue-600">10</div>
+            <p class="text-[11px] text-slate-500">Archi, BET, BCT & Labo</p>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-3 text-xs">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+              <!-- Search -->
+              <div class="relative w-full sm:w-60">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+                <input type="text" id="checklistPhSearch" oninput="window.handleChecklistPhFilter()" placeholder="Recherche projet, GH, AMI..." class="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-teal-500">
+              </div>
+
+              <!-- Filter Projet Dropdown -->
+              <div class="w-full sm:w-auto">
+                <select id="checklistPhFilterProjet" onchange="window.handleChecklistPhProjetChange()" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  <option value="all">🏢 Tous les Projets</option>
+                </select>
+              </div>
+
+              <!-- Filter GH Dropdown -->
+              <div class="w-full sm:w-auto">
+                <select id="checklistPhFilterGH" onchange="window.handleChecklistPhFilter()" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  <option value="all">📑 Toutes les Tranches / GH</option>
+                </select>
+              </div>
+
+              <!-- Filter Status -->
+              <div class="w-full sm:w-auto">
+                <select id="checklistPhFilterStatus" onchange="window.handleChecklistPhFilter()" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  <option value="all">Tous les statuts de complétude</option>
+                  <option value="complete">🏆 Dossier 100% Complet (6/6)</option>
+                  <option value="with_rokhas">✅ Avec Permis Rokhas</option>
+                  <option value="without_rokhas">❌ Sans Permis Rokhas</option>
+                  <option value="with_docs">📄 Avec au moins 1 document</option>
+                  <option value="empty">⚠️ Aucun document (0/6)</option>
+                </select>
+              </div>
+
+              <!-- Filter Document Specific -->
+              <div class="w-full sm:w-auto">
+                <select id="checklistPhFilterDoc" onchange="window.handleChecklistPhFilter()" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  <option value="all">Tous les éléments requis</option>
+                  <option value="Permis_d_habiter_via_rokhas">Permis d'habiter via Rokhas</option>
+                  <option value="Attestation_d_achèvement_Archi">Attestation d'achèvement Archi</option>
+                  <option value="Attestation_de_stabilité_et_de_conformité_BET">Attestation stabilité BET</option>
+                  <option value="Attestation_de_stabilité_et_de_conformité_BCT">Attestation stabilité BCT</option>
+                  <option value="Attestation_de_conformité_de_lot_Etanchéité_BCT">Attestation étanchéité BCT</option>
+                  <option value="Rapport_de_synthèse_de_laboratoire">Rapport de synthèse Labo</option>
+                </select>
+              </div>
+
+              <!-- Reset button -->
+              <button type="button" onclick="window.resetChecklistPhFilters()" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold transition flex items-center gap-1" title="Réinitialiser tous les filtres">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Effacer</span>
+              </button>
+            </div>
+
+            <div id="checklistPhSummaryCount" class="text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">
+              Affichage de 18 tranches
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Table -->
+        <div class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="px-4 py-3.5">Projet</th>
+                  <th class="px-3 py-3.5">Tranches / GH</th>
+                  <th class="px-3 py-3.5 text-center min-w-[130px]">Permis Rokhas</th>
+                  <th class="px-3 py-3.5 text-center min-w-[130px]">Attest. Archi</th>
+                  <th class="px-3 py-3.5 text-center min-w-[130px]">Attest. BET</th>
+                  <th class="px-3 py-3.5 text-center min-w-[130px]">Attest. BCT</th>
+                  <th class="px-3 py-3.5 text-center min-w-[130px]">Étanchéité BCT</th>
+                  <th class="px-3 py-3.5 text-center min-w-[130px]">Rapport Labo</th>
+                  <th class="px-3 py-3.5 text-center min-w-[100px]">Complétude</th>
+                </tr>
+              </thead>
+              <tbody id="checklistPhTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 6: IMPORT CSV, FICHIERS & DONNÉES     -->
+      <!-- ========================================== -->
+      <section id="view-import-export" class="view-panel space-y-6 hidden">
+        
+        <!-- Sub-Tabs Navigation for Importation & Sync -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="tabBtnSyncLot" onclick="window.switchImportSubTab('sync-lot')" class="import-subtab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white dark:bg-white dark:text-slate-900 transition flex items-center space-x-2">
+              <i data-lucide="layers" class="w-4 h-4"></i>
+              <span>1. Synchronisation Locale par Lot</span>
+            </button>
+            <button id="tabBtnSyncAzure" onclick="window.switchImportSubTab('sync-azure')" class="import-subtab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center space-x-2">
+              <i data-lucide="database" class="w-4 h-4 text-blue-500"></i>
+              <span>2. Connecteur Azure SQL</span>
+            </button>
+            <button id="tabBtnSyncSharePoint" onclick="window.switchImportSubTab('sync-sharepoint')" class="import-subtab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center space-x-2">
+              <i data-lucide="cloud" class="w-4 h-4 text-indigo-500"></i>
+              <span>3. Connecteur SharePoint</span>
+            </button>
+            <button id="tabBtnGlobalExports" onclick="window.switchImportSubTab('global-exports')" class="import-subtab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center space-x-2">
+              <i data-lucide="file-down" class="w-4 h-4 text-emerald-500"></i>
+              <span>4. Exportations Globales</span>
+            </button>
+          </div>
+
+          <div class="flex items-center space-x-2 text-xs">
+            <button type="button" onclick="window.refreshSourceData()" title="Vérifier et rafraîchir tous les fichiers sources" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold transition shadow-sm">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"></i>
+              <span>Vérifier Données Sources</span>
+            </button>
+            <span id="serverStatusBadge" onclick="window.configureBackendUrl()" title="Cliquez pour configurer ou modifier l'adresse de l'API Backend" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 cursor-pointer hover:opacity-90 transition">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Serveur Local API Connecté (Port 8080)
+            </span>
+          </div>
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- SUB-PANEL 1 : SYNCHRONISATION LOCALE PAR LOT MÉTIER     -->
+        <!-- ======================================================= -->
+        <div id="panelSyncLot" class="import-subpanel space-y-4">
+          <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="split" class="w-4 h-4 text-emerald-600"></i>
+                  Synchronisation Ciblée par Lot Métier
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  Assignez et synchronisez un fichier local spécifique pour chaque lot sans écraser les données des autres lots.
+                </p>
+              </div>
+              <span class="text-xs text-slate-400">Chaque lot reste synchronisé et lié en chemin au tableau de bord</span>
+            </div>
+
+            <!-- 5 LOT CARDS GRID -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
+              
+              <!-- LOT 1: BÂTIMENT & CHANTIERS -->
+              <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:border-blue-400 dark:hover:border-blue-600 transition flex flex-col justify-between space-y-3">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                      Lot 1
+                    </span>
+                    <span id="lotActiveBadge-batiment" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      1 985 imm.
+                    </span>
+                  </div>
+                  <h4 class="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <i data-lucide="building-2" class="w-4 h-4 text-blue-600 shrink-0"></i>
+                    Bâtiment & Chantiers
+                  </h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Gros Œuvre, Lots Secondaires, Étages, Permis d'Habiter (PH).
+                  </p>
+                  <div class="mt-2 text-[11px] p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                    <span class="text-slate-400 block text-[10px]">Fichier actif :</span>
+                    <span id="lotFileName-batiment" class="font-bold truncate block">AVANCEMENT TEST CSV.csv</span>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <input type="file" id="lotFileInput-batiment" accept=".csv,.xlsx,.xls" class="hidden" onchange="window.handleLotFileSelected(event, 'batiment')">
+                  <button type="button" onclick="document.getElementById('lotFileInput-batiment').click()" class="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition flex items-center justify-center space-x-1.5">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Synchroniser ce Lot</span>
+                  </button>
+                  <button type="button" onclick="window.viewLotData('batiment')" class="w-full py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition">
+                    Voir les Données
+                  </button>
+                </div>
+              </div>
+
+              <!-- LOT 2: RÉSEAUX & VRD (SRM) -->
+              <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:border-yellow-400 dark:hover:border-yellow-600 transition flex flex-col justify-between space-y-3">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300">
+                      Lot 2
+                    </span>
+                    <span id="lotActiveBadge-vrd" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      47 ops.
+                    </span>
+                  </div>
+                  <h4 class="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <i data-lucide="zap" class="w-4 h-4 text-yellow-500 shrink-0"></i>
+                    Réseaux & VRD (SRM)
+                  </h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Électricité BT/MT, Postes, Eau Potable, Assainissement, Bassins.
+                  </p>
+                  <div class="mt-2 text-[11px] p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                    <span class="text-slate-400 block text-[10px]">Fichier actif :</span>
+                    <span id="lotFileName-vrd" class="font-bold truncate block">SUIVI_SRM_CSV.csv</span>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <input type="file" id="lotFileInput-vrd" accept=".csv,.xlsx,.xls" class="hidden" onchange="window.handleLotFileSelected(event, 'vrd')">
+                  <button type="button" onclick="document.getElementById('lotFileInput-vrd').click()" class="w-full py-2 px-3 rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white font-bold text-xs shadow-sm transition flex items-center justify-center space-x-1.5">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Synchroniser ce Lot</span>
+                  </button>
+                  <button type="button" onclick="window.viewLotData('vrd')" class="w-full py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition">
+                    Voir les Données
+                  </button>
+                </div>
+              </div>
+
+              <!-- LOT 3: LPEE / CONTRÔLE QUALITÉ -->
+              <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:border-purple-400 dark:hover:border-purple-600 transition flex flex-col justify-between space-y-3">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                      Lot 3
+                    </span>
+                    <span id="lotActiveBadge-lpee" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      35 dossiers
+                    </span>
+                  </div>
+                  <h4 class="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <i data-lucide="check-check" class="w-4 h-4 text-purple-600 shrink-0"></i>
+                    Qualité LPEE / CID
+                  </h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Audits laboratoire, PV de réception, levées de réserves.
+                  </p>
+                  <div class="mt-2 text-[11px] p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                    <span class="text-slate-400 block text-[10px]">Fichier actif :</span>
+                    <span id="lotFileName-lpee" class="font-bold truncate block">LPEE CSV.csv</span>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <input type="file" id="lotFileInput-lpee" accept=".csv,.xlsx,.xls" class="hidden" onchange="window.handleLotFileSelected(event, 'lpee')">
+                  <button type="button" onclick="document.getElementById('lotFileInput-lpee').click()" class="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm transition flex items-center justify-center space-x-1.5">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Synchroniser ce Lot</span>
+                  </button>
+                  <button type="button" onclick="window.viewLotData('lpee')" class="w-full py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition">
+                    Voir les Données
+                  </button>
+                </div>
+              </div>
+
+              <!-- LOT 4: ÉQUIPEMENTS PUBLICS -->
+              <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:border-amber-400 dark:hover:border-amber-600 transition flex flex-col justify-between space-y-3">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                      Lot 4
+                    </span>
+                    <span id="lotActiveBadge-equipements" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      59 sites
+                    </span>
+                  </div>
+                  <h4 class="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <i data-lucide="school" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                    Équipements Publics
+                  </h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Mosquées, Écoles, Collèges, Lycées, Dispensaires.
+                  </p>
+                  <div class="mt-2 text-[11px] p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                    <span class="text-slate-400 block text-[10px]">Fichier actif :</span>
+                    <span id="lotFileName-equipements" class="font-bold truncate block">EQUIPEMENT PUBLIC.csv</span>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <input type="file" id="lotFileInput-equipements" accept=".csv,.xlsx,.xls" class="hidden" onchange="window.handleLotFileSelected(event, 'equipements')">
+                  <button type="button" onclick="document.getElementById('lotFileInput-equipements').click()" class="w-full py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition flex items-center justify-center space-x-1.5">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Synchroniser ce Lot</span>
+                  </button>
+                  <button type="button" onclick="window.viewLotData('equipements')" class="w-full py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition">
+                    Voir les Données
+                  </button>
+                </div>
+              </div>
+
+              <!-- LOT 5: CHECK-LISTE PERMIS D'HABITER (PH) -->
+              <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:border-teal-400 dark:hover:border-teal-600 transition flex flex-col justify-between space-y-3">
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300">
+                      Lot 5
+                    </span>
+                    <span id="lotActiveBadge-checklist" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                      18 tranches
+                    </span>
+                  </div>
+                  <h4 class="font-extrabold text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <i data-lucide="clipboard-check" class="w-4 h-4 text-teal-600 shrink-0"></i>
+                    Check-liste PH
+                  </h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                    Permis Rokhas, Attestations Archi, BET, BCT, Étanchéité & Labo.
+                  </p>
+                  <div class="mt-2 text-[11px] p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                    <span class="text-slate-400 block text-[10px]">Fichier actif :</span>
+                    <span id="lotFileName-checklist" class="font-bold truncate block">CHECK LISTE ph CSV.csv</span>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <input type="file" id="lotFileInput-checklist" accept=".csv,.xlsx,.xls" class="hidden" onchange="window.handleLotFileSelected(event, 'checklist')">
+                  <button type="button" onclick="document.getElementById('lotFileInput-checklist').click()" class="w-full py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-sm transition flex items-center justify-center space-x-1.5">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Synchroniser ce Lot</span>
+                  </button>
+                  <button type="button" onclick="window.viewLotData('checklist')" class="w-full py-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition">
+                    Voir les Données
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Drag & Drop Zone for Quick Lot Update -->
+            <div id="dropZone" class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 rounded-2xl p-6 text-center cursor-pointer transition mt-2">
+              <i data-lucide="file-up" class="w-8 h-8 mx-auto text-slate-400 mb-2"></i>
+              <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                Glissez-déposez un fichier <code class="text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-1 py-0.5 rounded">.CSV</code> ou <code class="text-blue-600 bg-blue-50 dark:bg-blue-950 px-1 py-0.5 rounded">.XLSX</code> ici
+              </p>
+              <div class="flex items-center justify-center gap-2 mt-2">
+                <span class="text-[11px] text-slate-400">Affecter automatiquement au lot :</span>
+                <select id="quickDropLotSelect" class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none">
+                  <option value="auto">Détection automatique</option>
+                  <option value="batiment">🏢 Lot Bâtiment & Chantiers</option>
+                  <option value="vrd">⚡ Lot Réseaux & VRD (SRM)</option>
+                  <option value="lpee">🔬 Lot Qualité LPEE</option>
+                  <option value="equipements">🏫 Lot Équipements Publics</option>
+                  <option value="checklist">📋 Lot Check-liste PH (CHECK LISTE ph CSV.csv)</option>
+                </select>
+                <input type="file" id="csvFileInput" accept=".csv,.xlsx,.xls" class="hidden">
+                <button type="button" onclick="document.getElementById('csvFileInput').click()" class="px-3 py-1 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold shadow transition">
+                  Parcourir...
+                </button>
+              </div>
+            </div>
+
+            <div id="uploadFeedback" class="hidden p-3 rounded-xl text-xs font-medium"></div>
+          </div>
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- SUB-PANEL 2 : CONNECTEUR AZURE SQL DATABASE             -->
+        <!-- ======================================================= -->
+        <div id="panelSyncAzure" class="import-subpanel space-y-4 hidden">
+          <div class="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div>
+                <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="database" class="w-5 h-5 text-blue-500"></i>
+                  Connecteur Microsoft Azure SQL Database
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  Importez directement vos tables ou vues depuis Azure SQL, sauvegardez le fichier CSV en local et liez-le au tableau de bord.
+                </p>
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <button onclick="window.loadDemoAzureProfile()" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 transition">
+                  Exemple Démo
+                </button>
+                <button onclick="window.saveAzureProfile()" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
+                  Sauvegarder Profil
+                </button>
+              </div>
+            </div>
+
+            <!-- Azure SQL Form Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+              
+              <!-- 1. Serveur Azure SQL (Host) -->
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  1. Lien du Serveur Azure SQL (Host) <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" id="azureServer" placeholder="ex: mon-serveur.database.windows.net" class="w-full px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Adresse DNS du serveur Azure SQL (port 1433)</span>
+              </div>
+
+              <!-- 2. Nom de la Base de Données -->
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  2. Nom de la Base de Données <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" id="azureDatabase" placeholder="ex: VSB_PROD_DB" class="w-full px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Nom de la base SQL Server configurée</span>
+              </div>
+
+              <!-- 3. Nom d'Utilisateur SQL -->
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  3. Nom d'Utilisateur SQL <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" id="azureUsername" placeholder="ex: vsb_admin" class="w-full px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Identifiant de connexion SQL Azure</span>
+              </div>
+
+              <!-- 4. Mot de Passe -->
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  4. Mot de Passe SQL <span class="text-rose-500">*</span>
+                </label>
+                <input type="password" id="azurePassword" placeholder="••••••••••••" class="w-full px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Chiffré via protocole TLS / SSL</span>
+              </div>
+
+              <!-- 5. Table / Vue ou Requête SQL -->
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  5. Table, Vue ou Requête SQL <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" id="azureQuery" placeholder="ex: [dbo].[AVANCEMENT TEST CSV] ou AVANCEMENT" class="w-full px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Nom de la table (ex: AVANCEMENT TEST CSV) ou requête SELECT * FROM...</span>
+
+                <!-- Sélecteur rapide de tables Azure SQL -->
+                <div id="azureTableSelectContainer" class="hidden mt-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <label class="block text-[11px] font-bold text-emerald-700 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
+                    <i data-lucide="table" class="w-3.5 h-3.5"></i>
+                    <span>Tables détectées dans votre base :</span>
+                  </label>
+                  <select id="azureTableSelect" onchange="window.selectAzureTable(this.value)" class="w-full px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <option value="">-- Choisir une table détectée --</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 6. Lot Métier & Mode de Destination -->
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  6. Lot Associé & Mode de Mise à Jour <span class="text-rose-500">*</span>
+                </label>
+                <div class="space-y-1.5">
+                  <select id="azureLotSelect" onchange="window.handleAzureLotChange()" class="w-full px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none">
+                    <option value="batiment">🏢 Lot 1 : Bâtiment & Chantiers</option>
+                    <option value="vrd">⚡ Lot 2 : Réseaux VRD (SRM)</option>
+                    <option value="lpee">🔬 Lot 3 : Qualité LPEE / CID</option>
+                    <option value="equipements">🏫 Lot 4 : Équipements Publics</option>
+                    <option value="checklist">📋 Lot 5 : Check-liste PH (CHECK LISTE ph CSV.csv)</option>
+                  </select>
+                  <div class="flex items-center gap-3 pt-0.5 text-[11px]">
+                    <label class="flex items-center gap-1.5 cursor-pointer font-bold text-emerald-700 dark:text-emerald-400">
+                      <input type="radio" name="azureDestMode" id="azureDestModeSource" value="existing_source" checked onchange="window.toggleAzureDestMode()" class="text-emerald-600 focus:ring-emerald-500">
+                      <span>Mettre à jour le fichier source officiel</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer text-slate-600 dark:text-slate-400 font-medium">
+                      <input type="radio" name="azureDestMode" id="azureDestModeCustom" value="custom_file" onchange="window.toggleAzureDestMode()" class="text-blue-600 focus:ring-blue-500">
+                      <span>Fichier personnalisé</span>
+                    </label>
+                  </div>
+                  <div id="azureCustomFileContainer" class="hidden">
+                    <input type="text" id="azureFilename" placeholder="AVANCEMENT_AZURE.csv" value="AVANCEMENT_AZURE.csv" class="w-full px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none text-xs">
+                  </div>
+                  <div id="azureSourceFileInfo" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                    <i data-lucide="file-check" class="w-3 h-3"></i>
+                    <span>Cible : <strong id="azureTargetFileName">AVANCEMENT TEST CSV.csv</strong> (Mise à jour directe)</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- SSL Options & Actions -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div class="flex items-center space-x-4 text-xs text-slate-500 dark:text-slate-400">
+                <label class="flex items-center space-x-1.5 cursor-pointer">
+                  <input type="checkbox" id="azureEncrypt" checked class="rounded text-blue-600 focus:ring-blue-500">
+                  <span>Chiffrement SSL (Encrypt=yes)</span>
+                </label>
+                <label class="flex items-center space-x-1.5 cursor-pointer">
+                  <input type="checkbox" id="azureTrustCert" class="rounded text-blue-600 focus:ring-blue-500">
+                  <span>TrustServerCertificate</span>
+                </label>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" id="btnAzureTest" onclick="window.testAzureConnection()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition flex items-center space-x-1.5">
+                  <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
+                  <span>Tester Connexion</span>
+                </button>
+                <button type="button" id="btnAzureSync" onclick="window.syncAzureDatabase()" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition flex items-center space-x-1.5">
+                  <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                  <span>Vérifier & Mettre à Jour Fichier Source</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Azure Feedback & Output Log -->
+            <div id="azureFeedback" class="hidden p-4 rounded-xl text-xs space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- SUB-PANEL 3 : CONNECTEUR MICROSOFT SHAREPOINT / ONEDRIVE -->
+        <!-- ======================================================= -->
+        <div id="panelSyncSharePoint" class="import-subpanel space-y-4 hidden">
+          <div class="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div>
+                <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="cloud" class="w-5 h-5 text-indigo-500"></i>
+                  Connecteur Microsoft SharePoint & OneDrive Entreprise
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  Connectez-vous directement à votre bibliothèque documentaire SharePoint ou dossier OneDrive synchronisé pour importer et actualiser vos fichiers chantiers (Excel .xlsx et CSV).
+                </p>
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <button type="button" onclick="window.loadDetectedOneDriveFolder()" class="px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 transition flex items-center gap-1.5">
+                  <i data-lucide="folder-search" class="w-3.5 h-3.5"></i>
+                  <span>Dossier Détecté</span>
+                </button>
+                <button type="button" onclick="window.saveSharePointProfile()" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">
+                  Sauvegarder Profil
+                </button>
+              </div>
+            </div>
+
+            <!-- Mode Selector Tabs -->
+            <div class="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-xs font-semibold">
+              <button type="button" id="spModeBtnAccount" onclick="window.switchSharePointMode('account')" class="sp-mode-btn px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white font-bold transition flex items-center gap-1.5">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-indigo-500"></i>
+                <span>1. Compte Microsoft 365 Universel (Recommandé)</span>
+              </button>
+              <button type="button" id="spModeBtnLocal" onclick="window.switchSharePointMode('local_folder')" class="sp-mode-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 transition flex items-center gap-1.5">
+                <i data-lucide="folder-sync" class="w-3.5 h-3.5 text-blue-500"></i>
+                <span>2. Dossier Synchronisé (OneDrive PC)</span>
+              </button>
+              <button type="button" id="spModeBtnUrl" onclick="window.switchSharePointMode('direct_url')" class="sp-mode-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 transition flex items-center gap-1.5">
+                <i data-lucide="link" class="w-3.5 h-3.5 text-cyan-500"></i>
+                <span>3. Lien de Partage / URL Web</span>
+              </button>
+              <button type="button" id="spModeBtnGraph" onclick="window.switchSharePointMode('graph_api')" class="sp-mode-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 transition flex items-center gap-1.5">
+                <i data-lucide="key-round" class="w-3.5 h-3.5 text-amber-500"></i>
+                <span>4. Azure AD Client Secret (Avancé)</span>
+              </button>
+            </div>
+
+            <!-- Mode 1: Compte Microsoft 365 Universel (OAuth2 & Graph API) -->
+            <div id="spModePanelAccount" class="space-y-4 text-xs">
+              <!-- Disconnected View -->
+              <div id="msAuthDisconnectedCard" class="p-4 rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/60 via-white to-sky-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/40 space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/20">
+                      <i data-lucide="cloud-lightning" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        Connexion Officielle du Compte Microsoft 365 / SharePoint
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">Mode Universel</span>
+                      </h4>
+                      <p class="text-slate-600 dark:text-slate-400 text-xs mt-0.5">
+                        Connectez votre compte professionnel pour synchroniser directement vos fichiers chantiers SharePoint sans limitation 429 ni blocage anti-robot.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button type="button" id="btnStartMSAuth" onclick="window.startSharePointAuth()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/25 transition flex items-center justify-center gap-2 shrink-0">
+                    <i data-lucide="log-in" class="w-4 h-4"></i>
+                    <span>Connecter mon Compte SharePoint</span>
+                  </button>
+                </div>
+
+                <!-- Interactive Pairing / Device Code Modal / Card -->
+                <div id="msAuthPairingBox" class="hidden p-4 rounded-xl bg-white dark:bg-slate-900 border-2 border-indigo-500 dark:border-indigo-500 shadow-lg space-y-3">
+                  <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                    <div class="font-extrabold text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
+                      <i data-lucide="key" class="w-4 h-4 text-indigo-600"></i>
+                      <span>Autorisation requise sur votre compte Microsoft 365</span>
+                    </div>
+                    <button type="button" onclick="window.cancelSharePointAuth()" class="text-slate-400 hover:text-slate-600 text-xs font-semibold">
+                      Annuler
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <div class="space-y-1.5">
+                      <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Étape 1 : Copiez ce code de sécurité</span>
+                      <div class="flex items-center gap-2">
+                        <div id="msAuthUserCode" class="text-xl sm:text-2xl font-mono font-black tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-slate-800/80 px-4 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800 select-all text-center flex-1">
+                          --------
+                        </div>
+                        <button type="button" onclick="window.copyMSUserCode()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 transition" title="Copier le code">
+                          <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                      <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Étape 2 : Validez sur la page Microsoft</span>
+                      <a id="msAuthUrlBtn" href="https://login.microsoft.com/device" target="_blank" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center justify-center gap-2 shadow transition">
+                        <span>Ouvrir login.microsoft.com/device</span>
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                      </a>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px]">
+                    <div class="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-semibold">
+                      <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping"></span>
+                      <span id="msAuthPollStatus">En attente de votre validation sur le portail Microsoft...</span>
+                    </div>
+                    <span class="text-slate-400">Le code expire dans 15 min</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Connected View -->
+              <div id="msAuthConnectedCard" class="hidden p-4 rounded-2xl border border-emerald-300 dark:border-emerald-800/80 bg-gradient-to-r from-emerald-50/70 via-white to-teal-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                  <div id="msUserAvatar" class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-emerald-600 text-white font-black text-sm flex items-center justify-center shadow-md">
+                    MS
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h4 id="msUserName" class="text-sm font-extrabold text-slate-900 dark:text-white">Utilisateur Microsoft 365</h4>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Compte Connecté
+                      </span>
+                    </div>
+                    <p id="msUserEmail" class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">user@organisation.ma</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                  <button type="button" onclick="window.loadSharePointCloudFiles()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    <span>Actualiser les Fichiers Cloud</span>
+                  </button>
+                  <button type="button" onclick="window.disconnectSharePoint()" class="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-bold text-xs transition flex items-center gap-1.5">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                    <span>Déconnecter</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mode 2: Local Folder Inputs -->
+            <div id="spModePanelLocal" class="space-y-3 text-xs hidden">
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Chemin Local du Dossier SharePoint / OneDrive Synchronisé
+                </label>
+                <div class="flex gap-2">
+                  <input type="text" id="spFolderPath" placeholder="C:\Users\Hp\OneDrive\CIE VS PR 26" class="flex-1 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <button type="button" onclick="window.scanSharePointFolder()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition flex items-center gap-1.5">
+                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                    <span>Scanner les Fichiers</span>
+                  </button>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Dossier synchronisé automatiquement par le client Microsoft OneDrive sur votre PC</span>
+              </div>
+            </div>
+
+            <!-- Mode 2: Direct URL Inputs -->
+            <div id="spModePanelUrl" class="space-y-3 text-xs hidden">
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Lien de Partage SharePoint / OneDrive ou URL de Téléchargement Direct
+                </label>
+                <input type="text" id="spDirectUrl" placeholder="https://votre-organisation.sharepoint.com/:x:/s/... ou URL directe" class="w-full px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Prend en charge les fichiers .CSV, .XLSX et .XLSM</span>
+              </div>
+            </div>
+
+            <!-- Mode 3: Graph API Inputs -->
+            <div id="spModePanelGraph" class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs hidden">
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tenant ID (Azure AD)</label>
+                <input type="text" id="spTenantId" placeholder="ex: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Client ID (Application)</label>
+                <input type="text" id="spClientId" placeholder="ex: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Client Secret</label>
+                <input type="password" id="spClientSecret" placeholder="••••••••••••" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium focus:outline-none">
+              </div>
+            </div>
+
+            <!-- Target Lot Mapping -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Lot de Destination & Fichier Source à Mettre à Jour
+                </label>
+                <select id="spLotSelect" class="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold focus:outline-none">
+                  <option value="batiment">🏢 Lot 1 : Bâtiment & Chantiers (AVANCEMENT TEST CSV.csv)</option>
+                  <option value="vrd">⚡ Lot 2 : Réseaux & VRD (SUIVI_SRM_CSV.csv)</option>
+                  <option value="lpee">🔬 Lot 3 : Contrôle Qualité LPEE (LPEE CSV.csv)</option>
+                  <option value="equipements">🏫 Lot 4 : Équipements Publics (EQUIPEMENT PUBLIC.csv)</option>
+                  <option value="ami">📋 Appels à Manifestation d'Intérêt (AMI VSB VF.csv)</option>
+                  <option value="planif">📅 Planification Livraisons (PLANIF DG LIV.csv)</option>
+                  <option value="checklist">📋 Lot 5 : Check-liste PH (CHECK LISTE ph CSV.csv)</option>
+                </select>
+              </div>
+
+              <div class="flex items-end space-x-2">
+                <button type="button" id="btnSharePointTest" onclick="window.testSharePointConnection()" class="flex-1 py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition flex items-center justify-center space-x-1.5">
+                  <i data-lucide="zap" class="w-3.5 h-3.5 text-indigo-500"></i>
+                  <span>Tester Connexion</span>
+                </button>
+                <button type="button" id="btnSharePointSync" onclick="window.syncSharePointData()" class="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-1.5">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                  <span>Mettre à Jour & Synchroniser</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- SharePoint Scanned Files Table / List -->
+            <div id="spFilesContainer" class="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <i data-lucide="files" class="w-3.5 h-3.5 text-indigo-500"></i>
+                  Fichiers Détectés sur SharePoint / OneDrive :
+                </span>
+                <span id="spFilesCountBadge" class="text-slate-400 text-[11px]">0 fichier</span>
+              </div>
+              <div class="overflow-x-auto max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 sticky top-0">
+                    <tr>
+                      <th class="px-3 py-2">Nom du Fichier</th>
+                      <th class="px-3 py-2">Type</th>
+                      <th class="px-3 py-2">Taille</th>
+                      <th class="px-3 py-2">Modifié le</th>
+                      <th class="px-3 py-2">Lot Conseillé</th>
+                      <th class="px-3 py-2 text-right">Action Directe</th>
+                    </tr>
+                  </thead>
+                  <tbody id="spFilesTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tr>
+                      <td colspan="6" class="px-3 py-4 text-center text-slate-400">
+                        Cliquez sur « Scanner les Fichiers » ou « Tester Connexion » pour lister les fichiers disponibles.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- SharePoint Feedback -->
+            <div id="sharePointFeedback" class="hidden p-4 rounded-xl text-xs space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- SUB-PANEL 3 : EXPORTATIONS GLOBALES                     -->
+        <!-- ======================================================= -->
+        <div id="panelGlobalExports" class="import-subpanel space-y-4 hidden">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="p-2.5 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 w-fit mb-3">
+                  <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                </div>
+                <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">Export Complet des Chantiers (.xlsx)</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Téléchargez la totalité des 1 985 immeubles avec gros œuvre, lots secondaires et permis d'habiter.
+                </p>
+              </div>
+              <button onclick="window.exportToExcel('all')" class="mt-4 w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition flex items-center justify-center space-x-1.5">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Télécharger Excel (.xlsx)</span>
+              </button>
+            </div>
+
+            <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="p-2.5 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400 w-fit mb-3">
+                  <i data-lucide="filter" class="w-5 h-5"></i>
+                </div>
+                <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">Export des Données Filtrées (.xlsx)</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Exporte uniquement les enregistrements correspondant à vos filtres actifs (Province, Promoteur...).
+                </p>
+              </div>
+              <button onclick="window.exportToExcel('filtered')" class="mt-4 w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow transition flex items-center justify-center space-x-1.5">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Exporter Vue Filtrée</span>
+              </button>
+            </div>
+
+            <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="p-2.5 rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400 w-fit mb-3">
+                  <i data-lucide="printer" class="w-5 h-5"></i>
+                </div>
+                <h4 class="font-extrabold text-sm text-slate-900 dark:text-white">Imprimer / Rapport Exécutif PDF</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Mise en page optimisée pour compte-rendu exécutif de la Région Casablanca-Settat.
+                </p>
+              </div>
+              <button onclick="window.printReport()" class="mt-4 w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow transition flex items-center justify-center space-x-1.5">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                <span>Générer Rapport PDF</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- SECTION 2: LISTE DES FICHIERS IMPORTÉS & DISPONIBLES -->
+        <div class="glass-panel p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="folder-check" class="w-4 h-4 text-emerald-600"></i>
+                Liste des Fichiers Disponibles & Importés
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Cliquez sur un fichier pour charger et afficher l'intégralité de ses données dans le tableau ci-dessous.
+              </p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span id="filesCountBadge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                7 Fichiers en mémoire
+              </span>
+            </div>
+          </div>
+
+          <!-- Cards Grid of Available/Imported Files -->
+          <div id="importedFilesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- SECTION 3: VISUALISEUR DE DONNÉES EN DIRECT DU FICHIER SÉLECTIONNÉ -->
+        <div id="fileDataViewerCard" class="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden space-y-0">
+          
+          <!-- Viewer Header & Controls Toolbar -->
+          <div class="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span id="viewerFileCategoryBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  Chantiers & Bâtiments
+                </span>
+                <span id="viewerFileDateBadge" class="text-[11px] text-slate-400 font-medium">
+                  Importé le 29/09/2026
+                </span>
+              </div>
+              <h4 id="viewerFileName" class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                AVANCEMENT TEST CSV.csv
+              </h4>
+              <p id="viewerFileMeta" class="text-xs text-slate-500 dark:text-slate-400">
+                1 985 enregistrements • 97 colonnes
+              </p>
+            </div>
+
+            <!-- Toolbar Actions & Filters -->
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Live Search inside file -->
+              <div class="relative w-64">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="viewerSearchInput" placeholder="Filtrer dans ce fichier..." class="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              </div>
+
+              <!-- Page Size Select -->
+              <div class="flex items-center space-x-1.5 text-xs text-slate-500">
+                <span>Lignes:</span>
+                <select id="viewerPageSizeSelect" class="px-2 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none">
+                  <option value="15">15</option>
+                  <option value="25" selected>25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+
+              <!-- Button: Synchroniser avec Dashboard -->
+              <button id="viewerSyncDashboardBtn" onclick="window.syncSelectedFileWithDashboard()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Synchroniser Dashboard</span>
+              </button>
+
+              <!-- Button: Export File to Excel -->
+              <button id="viewerExportExcelBtn" onclick="window.exportActiveViewerFile('xlsx')" class="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 text-xs font-semibold transition" title="Télécharger ce fichier en Excel (.xlsx)">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+              </button>
+
+              <!-- Button: Export File to CSV -->
+              <button id="viewerExportCsvBtn" onclick="window.exportActiveViewerFile('csv')" class="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 text-xs font-semibold transition" title="Télécharger ce fichier en CSV">
+                <i data-lucide="download" class="w-4 h-4 text-blue-600"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Dynamic Data Table with Horizontal & Vertical Scroll -->
+          <div class="overflow-x-auto max-h-[550px] overflow-y-auto">
+            <table class="w-full text-left text-xs whitespace-nowrap">
+              <thead id="viewerTableHead" class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm">
+                <!-- Dynamically generated columns -->
+              </thead>
+              <tbody id="viewerTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Viewer Pagination Bar -->
+          <div class="p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 bg-slate-50/40 dark:bg-slate-800/30">
+            <div id="viewerPaginationSummary">
+              Affichage 1 à 25 sur 1 985 enregistrements
+            </div>
+            <div class="flex items-center space-x-2">
+              <button id="viewerPrevPageBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition">
+                Précédent
+              </button>
+              <div id="viewerPaginationNumbers" class="flex items-center space-x-1">
+                <!-- Page numbers injected via JS -->
+              </div>
+              <button id="viewerNextPageBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-medium transition">
+                Suivant
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: INSPECTEUR D'IMMEUBLE (DRILLDOWN)   -->
+  <!-- ========================================== -->
+  <div id="modalImmeuble" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden modal-overlay">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden modal-content">
+      
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between bg-slate-50/50 dark:bg-slate-800/40">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span id="modalProvinceBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">NOUACEUR</span>
+            <span id="modalPHBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">PH OBTENU</span>
+          </div>
+          <h3 id="modalTitle" class="text-xl font-extrabold text-slate-900 dark:text-white">FADAAT AL MOUHIT 2 - IMM 03</h3>
+          <p id="modalSubtitle" class="text-xs text-slate-500 dark:text-slate-400">Promoteur: RESIDENCE DAR ESSAADA | Tranche: TR04 | GH: GH04</p>
+        </div>
+        <button id="closeModalBtn" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="flex-1 p-6 overflow-y-auto space-y-6">
+        
+        <!-- Summary Progress Gauges -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-center">
+            <span class="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase">Avancement Total</span>
+            <div id="modalGaugeTotal" class="text-3xl font-extrabold text-emerald-600 mt-1">62%</div>
+            <div class="w-full bg-emerald-200 dark:bg-emerald-950 rounded-full h-2 mt-2">
+              <div id="modalBarTotal" class="bg-emerald-600 h-2 rounded-full" style="width: 62%"></div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-center">
+            <span class="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase">Gros Œuvre (GO)</span>
+            <div id="modalGaugeGO" class="text-3xl font-extrabold text-blue-600 mt-1">100%</div>
+            <div class="w-full bg-blue-200 dark:bg-blue-950 rounded-full h-2 mt-2">
+              <div id="modalBarGO" class="bg-blue-600 h-2 rounded-full" style="width: 100%"></div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30 text-center">
+            <span class="text-xs font-bold text-purple-800 dark:text-purple-300 uppercase">Lots Secondaires</span>
+            <div id="modalGaugeLS" class="text-3xl font-extrabold text-purple-600 mt-1">25%</div>
+            <div class="w-full bg-purple-200 dark:bg-purple-950 rounded-full h-2 mt-2">
+              <div id="modalBarLS" class="bg-purple-600 h-2 rounded-full" style="width: 25%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Technical Tabs inside Modal -->
+        <div class="border-b border-slate-200 dark:border-slate-800 flex space-x-4">
+          <button data-modal-tab="go" class="modal-subtab-btn pb-2 text-xs font-bold border-b-2 border-emerald-600 text-emerald-600 dark:text-emerald-400">
+            Structure & Gros Œuvre
+          </button>
+          <button data-modal-tab="ls" class="modal-subtab-btn pb-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+            Lots Secondaires & Finitions
+          </button>
+          <button data-modal-tab="vrd" class="modal-subtab-btn pb-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+            VRD & Réseaux
+          </button>
+          <button data-modal-tab="qualite" class="modal-subtab-btn pb-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+            Contrôles LPEE & SRM
+          </button>
+        </div>
+
+        <!-- Subtab Content: Gros Oeuvre -->
+        <div id="modalContentGO" class="modal-subtab-content space-y-3">
+          <div id="modalGOGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Subtab Content: Lots Secondaires -->
+        <div id="modalContentLS" class="modal-subtab-content space-y-3 hidden">
+          <div id="modalLSGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Subtab Content: VRD -->
+        <div id="modalContentVRD" class="modal-subtab-content space-y-3 hidden">
+          <div id="modalVRDGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Subtab Content: Contrôle Qualite -->
+        <div id="modalContentQualite" class="modal-subtab-content space-y-3 hidden">
+          <div id="modalQualiteGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40 text-xs">
+        <div class="text-slate-500">
+          <span id="modalApptsCount" class="font-bold text-slate-800 dark:text-slate-200">20 appartements</span> dans cet immeuble
+        </div>
+        <div class="flex items-center space-x-2">
+          <button id="modalPrevImmBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold transition">
+            &larr; Précédent
+          </button>
+          <button id="modalNextImmBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold transition">
+            Suivant &rarr;
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform transition-all duration-300 translate-y-20 opacity-0 pointer-events-none flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-xs font-bold border"></div>
+
+  <!-- LOAD DATA & MAIN APPLICATION SCRIPT -->
+  <script id="vsbDataScript" src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

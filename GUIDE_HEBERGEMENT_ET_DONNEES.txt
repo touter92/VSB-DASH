@@ -1,0 +1,379 @@
+================================================================================
+          GUIDE DE DEPLOIEMENT, HEBERGEMENT ET GESTION DES DONNEES
+               TABLEAU DE BORD NATIONAL VSB (VILLES SANS BIDONVILLES)
+================================================================================
+
+Date de redaction : 16 Octobre 2026
+Version de l'application : VSB Monitor Enterprise v2.5
+
+
+TABLE DES MATIERES
+------------------
+1. ARCHITECTURE GLOBALE ET EMPLACEMENT DES DONNEES
+2. COMMENT LES FICHIERS SOURCES SONT AJOUTES ET ALIMENTES SUR LE SERVEUR
+3. FONCTIONNEMENT DES SAUVEGARDES (BACKUPS AUTOMATIQUES)
+4. GUIDE DE DEPLOIEMENT ET D'HEBERGEMENT :
+   - SCENARIO 1 : SERVEUR WINDOWS (Windows Server 2019 / 2022 / 2025)
+   - SCENARIO 2 : SERVEUR LINUX (Ubuntu 22.04 / 24.04 LTS / Debian)
+   - SCENARIO 3 : DEPLOIEMENT VIA CONTENEURS DOCKER (Recommande)
+5. GESTION DU REVERSE PROXY ET CERTIFICAT SSL (HTTPS)
+6. BONNES PRATIQUES DE SECURITE ET MAINTENANCE REGULIERE
+
+
+================================================================================
+1. ARCHITECTURE GLOBALE ET EMPLACEMENT DES DONNEES
+================================================================================
+
+L'application est concue selon une architecture legere, ultra-performante et
+resiliente. Elle ne depend pas d'un SGBD lourd pour la consultation, ce qui
+garantit un chargement instantane pour tous les utilisateurs.
+
+ARBORESCENCE PHYSIQUE RECOMMANDEE SUR LE SERVEUR :
+--------------------------------------------------
+D:\VSB_APP\  (ou /var/www/vsb-dashboard/ sous Linux)
+│
+├── AVANCEMENT TEST CSV.csv        <- Fichier source officiel : Lot 1 Batiment
+├── SUIVI_SRM_CSV.csv              <- Fichier source officiel : Lot 2 Reseaux VRD
+├── LPEE CSV.csv                   <- Fichier source officiel : Lot 3 Qualite LPEE/CID
+├── EQUIPEMENT PUBLIC.csv          <- Fichier source officiel : Lot 4 Equipements Publics
+├── AMI VSB VF.csv                 <- Fichier source officiel : AMI
+├── PLANIF DG LIV.csv              <- Fichier source : Planification Livraisons
+├── CHECK LISTE CSV.csv            <- Fichier source : Check-listes de Conformite
+│
+├── backups/                       <- DOSSIER AUTOMATIQUE DE TOUTES LES SAUVEGARDES
+│   ├── AVANCEMENT TEST CSV_20261016_164500.csv
+│   ├── SUIVI_SRM_CSV_20261016_164812.csv
+│   └── ... (historique complet date de chaque synchronisation)
+│
+└── VSB-WEB/                       <- DOSSIER WEB ET APPLICATION API
+    ├── index.html                 <- Interface utilisateur (Dashboard VSB)
+    ├── app.js                     <- Logique metier, filtres, graphiques, cartes
+    ├── data.js                    <- BASE DE DONNEES COMPILEE EN MEMOIRE (JSON)
+    ├── server.py                  <- API Python de synchronisation et serveur HTTP
+    ├── build_data.py              <- Moteur d'indexation et compilation (CSV -> data.js)
+    ├── start_dashboard.bat        <- Script de demarrage local Windows
+    └── requirements.txt           <- Dependances Python minimales
+
+
+ROLE DU FICHIER "data.js" :
+---------------------------
+Chaque fois qu'un fichier source CSV est ajoute ou mis a jour, le script
+"build_data.py" est execute automatiquement par le serveur.
+Il lit l'ensemble des fichiers CSV du dossier parent, normalise les colonnes,
+calcule les pourcentages globaux, gere les filtres (Projet, GH, Promoteur, PH),
+et genere "data.js".
+Grace a cela :
+- Le tableau de bord repond en 0,1 seconde sans aucune requete SQL lente.
+- 500 utilisateurs peuvent consulter le dashboard en meme temps sans saturer
+  la base de donnees.
+
+
+================================================================================
+2. COMMENT LES FICHIERS SOURCES SONT AJOUTES ET ALIMENTES SUR LE SERVEUR
+================================================================================
+
+Vous disposez de 4 METHODES COMPLEMENTAIRES pour ajouter ou actualiser les
+donnees sources sur le serveur :
+
+--------------------------------------------------------------------------------
+METHODE 1 : SYNCHRONISATION AZURE SQL DATABASE (Recommande pour le Cloud)
+--------------------------------------------------------------------------------
+1. Dans le tableau de bord, ouvrez l'onglet "Import & Synchronisation" puis
+   selectionnez le sous-onglet "Connecteur Azure SQL Database".
+2. Renseignez l'adresse de votre serveur (ex: vsb-server.database.windows.net),
+   le nom de la base, votre login et mot de passe.
+3. Cliquez sur "Tester Connexion". Le serveur se connecte et detecte toutes les
+   tables et vues disponibles dans votre base Azure SQL.
+4. Selectionnez votre table (ou badge cliquable, ex: [AVANCEMENT TEST CSV]).
+5. Choisissez "Mettre a jour le fichier source officiel".
+6. Cliquez sur "Verifier & Mettre a Jour Fichier Source".
+   -> Le serveur interroge Azure SQL.
+   -> Il cree automatiquement une sauvegarde (.bak + archive dans backups/).
+   -> Il compare les nouvelles lignes par rapport a l'ancienne version.
+   -> Il met a jour le fichier CSV correspondant sur le disque.
+   -> Il recompile instantanement "data.js" et recharge le dashboard.
+
+--------------------------------------------------------------------------------
+METHODE 2 : SYNCHRONISATION MICROSOFT SHAREPOINT / ONEDRIVE
+--------------------------------------------------------------------------------
+Idéal si les chefs de projets ou sous-traitants deposent leurs fichiers Excel
+ou CSV sur un dossier partage SharePoint / OneDrive :
+1. Dans l'onglet "Import & Synchronisation" > "SharePoint / OneDrive".
+2. Trois modes au choix :
+   - Mode Dossier Local : Si OneDrive Entreprise est installe sur le serveur,
+     le serveur detecte directement les dossiers synchronises
+     (ex: C:\Users\Admin\OneDrive\CIE VS PR 26).
+   - Mode URL Directe : Collez le lien de partage du fichier SharePoint.
+   - Mode Microsoft Graph API : Via Application Azure AD (Tenant/Client ID).
+3. Cliquez sur "Tester Connexion", puis sur "Synchroniser ce Fichier".
+   -> Le fichier (.xlsx ou .csv) est converti et integre automatiquement.
+
+--------------------------------------------------------------------------------
+METHODE 3 : DEPOT MANUEL DIRECT OU TRANSFERT SFTP / PARTAGE RESEAU SMB
+--------------------------------------------------------------------------------
+1. Un administrateur ou un script automatique (ETL, SSIS, cron) depose
+   directement les nouveaux fichiers CSV dans le dossier parent du serveur.
+2. Pour recharger les donnees sans redemarrer le serveur :
+   - Soit cliquer sur le bouton "Actualiser Donnees" present dans le bandeau
+     superieur du tableau de bord.
+   - Soit appeler l'API HTTP : GET http://mon-serveur:8080/api/refresh-sources
+   - Soit executer en ligne de commande : python build_data.py
+
+--------------------------------------------------------------------------------
+METHODE 4 : IMPORT MANUEL PAR GLISSER-DEPOSER DANS L'APPLICATION
+--------------------------------------------------------------------------------
+1. Dans l'onglet "Import & Synchronisation" > "Fichiers Locaux & Lots Metier".
+2. Choisissez le lot concerne (Batiment, VRD, LPEE, Equipements...).
+3. Glissez-deposez votre fichier CSV ou Excel.
+4. Cliquez sur "Sauvegarder et Synchroniser". Le fichier est enregistre sur
+   le disque du serveur et pris en compte immediatement.
+
+
+================================================================================
+3. FONCTIONNEMENT DES SAUVEGARDES (BACKUPS AUTOMATIQUES)
+================================================================================
+
+Pour garantir la securite absolue de vos donnees en production, chaque ecriture
+ou mise a jour declenche une double protection :
+
+1. SAUVEGARDE IMMEDIATE DIRECTE (.bak) :
+   - Fichier : "AVANCEMENT TEST CSV.csv.bak"
+   - Emplacement : Dans le meme dossier que le fichier source.
+   - Utilité : Secours rapide. Si une synchronisation echoue ou est interrompue,
+     le fichier d'origine est restaure en 1 clic.
+
+2. ARCHIVES D'HISTORIQUE HORODATEES (Dossier "backups/") :
+   - Fichier type : "backups/AVANCEMENT TEST CSV_20261016_164500.csv"
+   - Emplacement : D:\VSB_APP\backups\
+   - Fonctionnement : Chaque synchronisation conserve l'etat exact precedent
+     avec la date et l'heure a la seconde pres.
+   - Utilité :
+     * Audit complet des evolutions de chantiers mois par mois.
+     * Capacite de revenir a une version anterieure a tout moment.
+     * Tracabilite des suppressions ou modifications accidentelles.
+
+COMMENT RESTAURER UNE ANCIENNE VERSION ?
+----------------------------------------
+Si vous souhaitez restaurer un fichier d'une date particuliere :
+1. Allez dans le dossier "backups/".
+2. Reperez le fichier correspondant a la date souhaitee (ex: AVANCEMENT_20261010.csv).
+3. Copiez-le a la racine en le renommant avec son nom officiel ("AVANCEMENT TEST CSV.csv").
+4. Cliquez sur le bouton "Actualiser Donnees" dans le dashboard. C'est tout !
+
+
+================================================================================
+4. GUIDE DE DEPLOIEMENT ET D'HEBERGEMENT SUR SERVEUR
+================================================================================
+
+PREREQUIS GENERAUX SUR LE SERVEUR :
+-----------------------------------
+- Python version 3.8 ou superieure (3.10 / 3.11 / 3.12 recommandes).
+- Pilote ODBC Microsoft (necessaire uniquement si Azure SQL est utilise) :
+  "Microsoft ODBC Driver 18 for SQL Server" (telechargeable gratuitement sur
+  le site officiel Microsoft).
+- Bibliothèques Python (a installer via pip) :
+    pip install openpyxl pyodbc
+
+
+--------------------------------------------------------------------------------
+SCENARIO 1 : DEPLOIEMENT SUR UN SERVEUR WINDOWS (Windows Server / VM Azure)
+--------------------------------------------------------------------------------
+
+1. Installation de Python et du Driver :
+   - Telecharger et installer Python depuis python.org (COCHER "Add python.exe to PATH").
+   - Installer "msodbcsql18.msi" (Microsoft ODBC Driver 18).
+   - Ouvrir PowerShell en administrateur et taper :
+       pip install openpyxl pyodbc
+
+2. Deposer les fichiers de l'application :
+   - Copier le dossier complet "BUCKUP VSB TEST" vers un repertoire stable,
+     par exemple : D:\VSB_PRODUCTION\
+   - Verifier que l'arborescence contient :
+       D:\VSB_PRODUCTION\*.csv
+       D:\VSB_PRODUCTION\backups\
+       D:\VSB_PRODUCTION\VSB-WEB\server.py, index.html, data.js, etc.
+
+3. Configurer l'execution permanente en Service Windows (avec NSSM) :
+   Pour que l'API et le Dashboard tournent 24h/24 meme si aucune session
+   utilisateur n'est ouverte sur le serveur :
+   a) Telecharger NSSM (Non-Sucking Service Manager) sur nssm.cc.
+   b) Ouvrir PowerShell en tant qu'Administrateur et executer :
+        nssm install VsbDashboardService
+   c) Dans la fenetre NSSM qui s'ouvre :
+        - Path : C:\Users\Administrator\AppData\Local\Programs\Python\Python311\python.exe
+                 (ou chemin complet de votre python.exe)
+        - Startup directory : D:\VSB_PRODUCTION\VSB-WEB
+        - Arguments : server.py
+   d) Cliquer sur "Install service".
+   e) Demarrer le service :
+        nssm start VsbDashboardService
+
+   -> L'application demarre desormais automatiquement a chaque boot du serveur.
+
+4. Autoriser le port dans le Pare-feu Windows :
+   Executer dans PowerShell (Administrateur) :
+     New-NetFirewallRule -DisplayName "VSB Dashboard Web API" -Direction Inbound -LocalPort 8080 -Protocol TCP -Action Allow
+
+
+--------------------------------------------------------------------------------
+SCENARIO 2 : DEPLOIEMENT SUR UN SERVEUR LINUX (Ubuntu 22.04 / 24.04 LTS / Debian)
+--------------------------------------------------------------------------------
+
+1. Installation des paquets requis :
+   sudo apt update && sudo apt install -y python3 python3-pip python3-venv nginx curl
+
+   # Installation du driver ODBC Microsoft pour SQL Server (Azure SQL) :
+   curl https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/microsoft.gpg
+   curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+   sudo apt update
+   sudo ACCEPT_EULA=Y apt install -y msodbcsql18 unixodbc-dev
+   pip3 install openpyxl pyodbc
+
+2. Deploiement des fichiers :
+   sudo mkdir -p /var/www/vsb-dashboard
+   # Copier vos fichiers vers /var/www/vsb-dashboard/
+   sudo chown -R www-data:www-data /var/www/vsb-dashboard
+   sudo chmod -R 775 /var/www/vsb-dashboard
+
+3. Creation du Service systemd (/etc/systemd/system/vsb.service) :
+   sudo nano /etc/systemd/system/vsb.service
+
+   Contenu a inserer :
+   -----------------------------------------------------------------
+   [Unit]
+   Description=Serveur API VSB Dashboard Monitor
+   After=network.target
+
+   [Service]
+   User=www-data
+   Group=www-data
+   WorkingDirectory=/var/www/vsb-dashboard/VSB-WEB
+   ExecStart=/usr/bin/python3 server.py
+   Restart=always
+   RestartSec=5
+   Environment=PYTHONUNBUFFERED=1
+
+   [Install]
+   WantedBy=multi-user.target
+   -----------------------------------------------------------------
+
+   Activer et demarrer le service :
+   sudo systemctl daemon-reload
+   sudo systemctl enable vsb.service
+   sudo systemctl start vsb.service
+   sudo systemctl status vsb.service
+
+
+--------------------------------------------------------------------------------
+SCENARIO 3 : DEPLOIEMENT PAR CONTENEUR DOCKER & DOCKER-COMPOSE
+--------------------------------------------------------------------------------
+
+La conteneurisation est la solution la plus moderne pour garantir la portabilite
+totale et l'isolation des donnees.
+
+Exemple de "docker-compose.yml" :
+-----------------------------------------------------------------
+version: '3.8'
+
+services:
+  vsb-dashboard:
+    build: .
+    container_name: vsb_dashboard_app
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      # Volumes persistants : Les donnees et backups restent sur la machine hote !
+      - ./data:/app/data
+      - ./backups:/app/backups
+      - ./web:/app/VSB-WEB
+    environment:
+      - PORT=8080
+-----------------------------------------------------------------
+
+
+================================================================================
+5. CONFIGURATION REVERSE PROXY & CERTIFICAT SSL (HTTPS)
+================================================================================
+
+Pour un acces securise depuis le reseau d'entreprise ou internet sans taper le
+port 8080 (ex: https://vsb.mon-ministere.gov.ma) :
+
+Exemple de configuration Nginx (/etc/nginx/sites-available/vsb) :
+-----------------------------------------------------------------
+server {
+    listen 80;
+    server_name vsb.mon-domaine.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name vsb.mon-domaine.com;
+
+    ssl_certificate /etc/letsencrypt/live/vsb.mon-domaine.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/vsb.mon-domaine.com/privkey.pem;
+
+    root /var/www/vsb-dashboard/VSB-WEB;
+    index index.html;
+
+    # 1. Fichiers statiques servis a la vitesse maximale par Nginx
+    location / {
+        try_files $uri $uri/ /index.html;
+        expires 1h;
+        add_header Cache-Control "public, no-transform";
+    }
+
+    # Le fichier data.js ne doit pas etre mis en cache agressif
+    location = /data.js {
+        expires -1;
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+    }
+
+    # 2. Requetes API redirigees vers le serveur Python
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 90;
+    }
+}
+-----------------------------------------------------------------
+
+
+================================================================================
+6. BONNES PRATIQUES DE SECURITE ET MAINTENANCE REGULIERE
+================================================================================
+
+1. STRATEGIE DE SAUVEGARDE EXTERNALISEE DU SERVEUR :
+   - Le serveur enregistre deja chaque mise a jour dans le dossier "backups/".
+   - Pour une securite maximale, configurez une sauvegarde quotidienne du dossier
+     "backups/" et des fichiers "*.csv" vers un support externe (NAS, Azure Blob,
+     AWS S3 ou disque de sauvegarde externe).
+
+2. GESTION DES PERMISSIONS DISQUE :
+   - Le processus executant `server.py` (ou l'utilisateur www-data) doit
+     imperativement disposer des droits de LECTURE et ECRITURE sur :
+     * Le dossier parent contenant les fichiers CSV.
+     * Le dossier "backups/".
+     * Le fichier "data.js" dans "VSB-WEB".
+
+3. PROTECTION DES IDENTIFIANTS AZURE SQL :
+   - Les identifiants de connexion Azure SQL renseignes dans l'interface sont
+     enregistres dans le stockage local du navigateur (localStorage) de
+     l'administrateur.
+   - Ils ne sont jamais stockes en clair sur les fichiers du serveur web public,
+     ce qui garantit que les utilisateurs finaux qui consultent le tableau de bord
+     ne peuvent jamais voir vos mots de passe de base de donnees.
+
+4. SURVEILLANCE DE L'ETAT DU SERVEUR :
+   - Une route de supervision sante est disponible :
+     GET http://votre-serveur:8080/api/status
+   - Elle renvoie l'etat du serveur, le pilote ODBC actif, le nombre de sauvegardes
+     disponibles dans le dossier backups/, et les dossiers sources detectes.
+
+================================================================================
+FIN DU GUIDE - DOCUMENT CONFIDENTIEL PROGRAMME VSB
+================================================================================
